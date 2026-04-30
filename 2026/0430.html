@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대전광역시 메시징 통합 관제 시스템</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --bg-deep: #020617;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border-color: #334155;
+            --accent-blue: #38bdf8;
+            --accent-green: #4ade80;
+            --accent-red: #fb7185;
+            --text-main: #f8fafc;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Pretendard', sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; /* 스크롤 방지 */
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+        }
+
+        header {
+            height: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
+        }
+
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 350px 1fr 350px;
+            gap: 15px;
+            min-height: 0;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .district-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+        .district-table th, .district-table td {
+            padding: 8px 4px;
+            text-align: center;
+            border-bottom: 1px solid #1e293b;
+        }
+
+        .center-area { display: flex; flex-direction: column; gap: 15px; }
+        #map { flex: 1; border-radius: 12px; border: 1px solid var(--border-color); background: #111; }
+
+        .top-summary {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+        }
+        .summary-item {
+            background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 8px;
+            text-align: center; border: 1px solid #1e293b;
+        }
+        .summary-val { font-size: 1.2rem; font-weight: bold; color: var(--accent-blue); display: block; }
+        .summary-label { font-size: 0.7rem; color: #64748b; }
+
+        .bottom-container {
+            height: 140px; display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin-top: 15px;
+        }
+
+        .log-box {
+            background: #000; border-radius: 8px; padding: 10px;
+            font-family: monospace; font-size: 0.75rem; color: #4ade80;
+            overflow-y: auto; flex: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div style="display:flex; align-items:center; gap:15px;">
+            <h1 style="font-size:1.5rem;">DAEJEON <span style="color:var(--accent-blue)">MSG CONTROL</span></h1>
+            <span style="background:#ef4444; color:white; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:bold;">LIVE</span>
+        </div>
+        <div style="text-align: right">
+            <div id="clock" style="font-size: 1.2rem; font-weight: bold; color: var(--accent-blue);">00:00:00</div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="card">
+            <div class="card-header"><i data-lucide="building-2"></i> 자치구별 발송 상세</div>
+            <table class="district-table">
+                <thead>
+                    <tr><th>기관</th><th>PUSH</th><th>TALK</th><th>UMS</th><th>성공률</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>서구</td><td>4.2k</td><td>1.1k</td><td>245</td><td style="color:var(--accent-green)">99.9%</td></tr>
+                    <tr><td>유성구</td><td>5.8k</td><td>2.1k</td><td>512</td><td style="color:var(--accent-green)">99.8%</td></tr>
+                    <tr><td>중구</td><td>2.1k</td><td>850</td><td>112</td><td style="color:var(--accent-green)">99.7%</td></tr>
+                    <tr><td>동구</td><td>1.9k</td><td>720</td><td>320</td><td style="color:var(--accent-red)">92.4%</td></tr>
+                    <tr><td>대덕구</td><td>1.5k</td><td>510</td><td>98</td><td style="color:var(--accent-green)">99.9%</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="center-area">
+            <div class="top-summary">
+                <div class="summary-item"><span class="summary-label">전체 발송 건수</span><span class="summary-val">1,842,091</span></div>
+                <div class="summary-item"><span class="summary-label">예상 예산</span><span class="summary-val" style="color:var(--accent-green)">₩45.2M</span></div>
+                <div class="summary-item"><span class="summary-label">평균 성공률</span><span class="summary-val">99.82%</span></div>
+                <div class="summary-item"><span class="summary-label">SIP 회선</span><span class="summary-val" style="font-size:1rem;">124 / 582</span></div>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><i data-lucide="bar-chart-3"></i> 트래픽 추이 (WEB/APP)</div>
+            <div style="flex:1;"><canvas id="trafficChart"></canvas></div>
+        </div>
+    </div>
+
+    <div class="bottom-container">
+        <div class="card"><div class="card-header"><i data-lucide="activity"></i> 실시간 상태</div><canvas id="statusChart"></canvas></div>
+        <div class="card"><div class="card-header"><i data-lucide="terminal"></i> 시스템 로그</div><div class="log-box" id="logBox"></div></div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        // 시계
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
+
+        // 지도
+        const map = L.map('map', { zoomControl: false }).setView([36.3504, 127.3845], 11);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        L.circle([36.3504, 127.3845], { color: '#38bdf8', radius: 1500 }).addTo(map);
+
+        // 트래픽 차트
+        new Chart(document.getElementById('trafficChart'), {
+            type: 'line',
+            data: {
+                labels: ['09:00', '10:00', '11:00', '12:00', '13:00'],
+                datasets: [{ label: 'Traffic', data: [400, 600, 800, 500, 900], borderColor: '#38bdf8', tension: 0.4 }]
+            },
+            options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        // 상태 차트
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['성공', '실패'],
+                datasets: [{ data: [98, 2], backgroundColor: ['#4ade80', '#fb7185'] }]
+            },
+            options: { maintainAspectRatio: false, cutout: '70%' }
+        });
+
+        // 로그 시뮬레이션
+        const logBox = document.getElementById('logBox');
+        setInterval(() => {
+            const entry = `[${new Date().toLocaleTimeString()}] INFO: 메시지 패킷 전송 정상<br>`;
+            logBox.innerHTML += entry;
+            logBox.scrollTop = logBox.scrollHeight;
+        }, 2000);
+    </script>
+</body>
+</html>
